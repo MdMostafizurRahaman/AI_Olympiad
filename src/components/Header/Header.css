@@ -1,0 +1,31 @@
+.notification-dropdown {
+    position: absolute;
+    top: 50px !important;
+    right: 10px !important;
+    width: 300px !important;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 10px !important;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .notification-dropdown p {
+    margin: 0;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background 0.3s ease-in-out;
+  }
+  
+  .notification-dropdown p:last-child {
+    border-bottom: none;
+  }
+  
+  .notification-dropdown p:hover {
+    background: #f0f0f0;
+  }
+  
