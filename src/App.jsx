@@ -16,13 +16,35 @@ import DailyReport from './pages/DailyReport.jsx';
 import Notification from "./pages/Notification";
 import Recommendation from "./pages/Recommendation";
 
+// Create context outside the component
 const Mycontext = createContext();
+
+// Load Google Maps API once and properly
+const loadGoogleMapsScript = () => {
+  // Check if the script is already loaded
+  if (!document.querySelector('script[src*="maps.googleapis.com/maps/api"]')) {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+    
+    // Define global callback
+    window.initMap = () => {
+      console.log("Google Maps API loaded successfully");
+    };
+  }
+};
 
 const App = () => {
   const [isToggleSidebar, setIsToggleSidebar] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
   const [isHideSidebarAndHeader, setisHideSidebarAndHeader] = useState(false);
-  const [themeMode, setThemeMode] = useState(true);
+  const [themeMode, setThemeMode] = useState(() => {
+    // Get theme from localStorage or default to light
+    const savedTheme = localStorage.getItem('themeMode');
+    return savedTheme === 'dark' ? false : true;
+  });
   const [currentLocationData, setCurrentLocationData] = useState({
     aqiDataJson: null,
     aqi: null,
@@ -32,6 +54,12 @@ const App = () => {
   });
   const [isFetching, setIsFetching] = useState(false);
   const [name, setName] = useState('');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Load Google Maps script once on component mount
+    loadGoogleMapsScript();
+  }, []);
 
   useEffect(() => {
     if (themeMode === true) {
@@ -47,6 +75,9 @@ const App = () => {
 
   const fetchLocationData = async (searchLocation = null) => {
     setIsFetching(true);
+    setError(null);
+    
+    // Use environment variables
     const aqicnToken = import.meta.env.VITE_AQICN_API_TOKEN;
     const weatherApiKey = import.meta.env.VITE_WEATHER_API_KEY;
   
@@ -61,7 +92,7 @@ const App = () => {
         const geoData = await geoResponse.json();
   
         if (geoData.length === 0) {
-          console.error("Location not found");
+          setError("Location not found");
           setIsFetching(false);
           return;
         }
@@ -71,44 +102,74 @@ const App = () => {
         locationName = geoData[0].name;
       } else {
         // Use device's current location when no search is made
-        const position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject);
-        });
-  
-        latitude = position.coords.latitude;
-        longitude = position.coords.longitude;
+        try {
+          const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 10000,
+              maximumAge: 60000,
+            });
+          });
+          
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+        } catch (geoError) {
+          console.error("Geolocation error:", geoError);
+          setError("Unable to get location. Using default location (Dhaka)");
+          // Default to Dhaka coordinates
+          latitude = 23.8103;
+          longitude = 90.4125;
+          locationName = "Dhaka";
+        }
       }
   
-      // Fetch AQI Data
+      // Fetch AQI Data with error handling
       const aqiResponse = await fetch(
         `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${aqicnToken}`
       );
+      
+      if (!aqiResponse.ok) {
+        throw new Error(`AQI API error: ${aqiResponse.status}`);
+      }
+      
       const aqiData = await aqiResponse.json();
+      
+      if (aqiData.status !== "ok") {
+        throw new Error(`AQI data error: ${aqiData.data}`);
+      }
   
       // Fetch Weather Data
       const weatherResponse = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${weatherApiKey}&units=metric`
       );
+      
+      if (!weatherResponse.ok) {
+        throw new Error(`Weather API error: ${weatherResponse.status}`);
+      }
+      
       const weatherData = await weatherResponse.json();
   
       setCurrentLocationData({
-        aqiDataJson: aqiData || "N/A",
-        aqi: aqiData.data.aqi || "N/A",
-        temperature: weatherData.main.temp || "N/A",
-        humidity: weatherData.main.humidity || "N/A",
+        aqiDataJson: aqiData,
+        aqi: aqiData.data?.aqi || "N/A",
+        temperature: weatherData.main?.temp || "N/A",
+        humidity: weatherData.main?.humidity || "N/A",
         location: locationName || weatherData.name || "N/A",
       });
     } catch (error) {
       console.error("Error fetching location data:", error);
+      setError(`Error: ${error.message}`);
     } finally {
       setIsFetching(false);
     }
   };
-  
 
   useEffect(() => {
     fetchLocationData(); // Initial fetch
-    const intervalId = setInterval(fetchLocationData, 60 * 60 * 1000); // Update every hour
+    
+    // Update every hour
+    const intervalId = setInterval(() => {
+      fetchLocationData();
+    }, 60 * 60 * 1000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -122,12 +183,13 @@ const App = () => {
     setisHideSidebarAndHeader,
     themeMode,
     setThemeMode,
-    fetchLocationData, // Expose fetch function for searching
-    setCurrentLocationData, // Allow resetting to current location
-    currentLocationData, // Provide location data in context
-    isFetching, // Provide loading state in context
+    fetchLocationData,
+    setCurrentLocationData,
+    currentLocationData,
+    isFetching,
     name,
-    setName
+    setName,
+    error
   };
   
   return (
@@ -142,6 +204,7 @@ const App = () => {
           )}
 
           <div className={`content ${isHideSidebarAndHeader ? 'full' : ''} ${isToggleSidebar ? 'toggle' : ''}`}>
+            {error && <div className="alert alert-danger">{error}</div>}
             <Routes>
               <Route path="/" exact element={<DashBoard />} />
               <Route path="/dashboard" exact element={<DashBoard />} />
@@ -155,8 +218,6 @@ const App = () => {
               <Route path='/daily-report' exact element={<DailyReport />} />
               <Route path="/notification" element={<Notification />} />
               <Route path="/recommerndations" element={<Recommendation />} />
-             
-              
             </Routes>
           </div>
         </div>
