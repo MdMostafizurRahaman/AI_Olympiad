@@ -45,7 +45,6 @@ const AqiForecast = () => {
     const fetchForecast = async () => {
         try {
             setIsLoading(true);
-            // Check if the necessary data exists
             if (!currentLocationData.aqiDataJson || 
                 !currentLocationData.aqiDataJson.data || 
                 !currentLocationData.aqiDataJson.data.forecast || 
@@ -57,20 +56,20 @@ const AqiForecast = () => {
 
             const forecast = currentLocationData.aqiDataJson.data.forecast.daily;
             let formattedData = forecast.pm25.map((item, index) => {
-                const pm10Data = forecast.pm10 && forecast.pm10[index] ? forecast.pm10[index].avg : "N/A";
-                const o3Data = forecast.o3 && forecast.o3[index] ? forecast.o3[index].avg : "N/A";
+                const pm10Data = forecast.pm10 && forecast.pm10[index] ? forecast.pm10[index].avg : 0;
+                const o3Data = forecast.o3 && forecast.o3[index] ? forecast.o3[index].avg : 0;
 
                 return {
                     date: item.day,
                     pm25: item.avg,
                     pm10: pm10Data,
                     o3: o3Data,
-                    predictedAQI: pm10Data !== "N/A" && o3Data !== "N/A" ? calculateAQI(item.avg, pm10Data, o3Data) : "N/A"
+                    predictedAQI: calculateAQI(item.avg, pm10Data, o3Data),
                 };
             });
 
             setForecastData(formattedData);
-            setError(null);
+            console.log("Formatted Forecast Data:", formattedData);
         } catch (error) {
             console.error("Error fetching forecast:", error);
             setError("Failed to fetch forecast data");
@@ -101,28 +100,30 @@ const AqiForecast = () => {
     };
 
     const chartDataAPI = {
-        labels: forecastData.map(item => item.date),
+        labels: forecastData.map(item => item.date || "N/A"),
         datasets: [
             {
-                label: 'API Forecasted AQI',
-                data: forecastData.map(item => item.predictedAQI),
-                borderColor: 'rgba(255, 99, 132, 1)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            }
-        ]
+                label: "API Forecasted AQI",
+                data: forecastData.map(item => item.predictedAQI || 0),
+                borderColor: "rgba(255, 99, 132, 1)",
+                backgroundColor: "rgba(255, 99, 132, 0.2)",
+            },
+        ],
     };
 
     const chartDataModel = {
-        labels: forecast.map(item => new Date(item.date).toLocaleDateString()),
+        labels: forecast.map(item => new Date(item.date).toLocaleDateString() || "N/A"),
         datasets: [
             {
-                label: 'Model Predicted PM2.5',
+                label: "Model Predicted PM2.5",
                 data: forecast.map(item => item.predicted_pm25?.toFixed(2) || 0),
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            }
-        ]
+                borderColor: "rgba(75, 192, 192, 1)",
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+            },
+        ],
     };
+
+    console.log("chartDataAPI Data:", chartDataAPI.datasets[0].data);
 
     if (isLoading) {
         return <div className="loading">Loading forecast data...</div>;
