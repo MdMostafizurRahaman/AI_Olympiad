@@ -10,13 +10,19 @@ const Recommendation = () => {
     useEffect(() => {
         axios.post("http://localhost:8000/forecast-model/", { days: 7 })
             .then(response => {
-                setForecast(response.data);
-                fetchRecommendations(response.data);
+                console.log("Backend Response:", response.data); // Debug log
+                setForecast(response.data.predictions); // Ensure predictions are set correctly
+                fetchRecommendations(response.data.predictions);
             })
             .catch(error => console.error("Error fetching data:", error));
     }, []);
 
     const fetchRecommendations = async (forecastData) => {
+        if (!Array.isArray(forecastData)) {
+            console.error("Forecast data is not an array:", forecastData);
+            return;
+        }
+
         try {
             const recommendationsPromises = forecastData.map(async (item) => {
                 const message = `${new Date(item.date).toLocaleDateString()} তারিখে PM2.5 এর পূর্বাভাসিত মাত্রা ${item.predicted_pm25.toFixed(2)}। নিরাপত্তার জন্য কি কি ব্যবস্থা গ্রহণ করা উচিত? বাংলা ভাষায় মার্কডাউন ফরম্যাটে বুলেট পয়েন্ট সহ উত্তর দিন।`;
@@ -38,6 +44,10 @@ const Recommendation = () => {
             console.error("সুপারিশ পেতে সমস্যা হয়েছে:", error);
         }
     };
+
+    if (!Array.isArray(forecast)) {
+        return <div>Error: Forecast data is invalid.</div>;
+    }
 
     return (
         <div className="recommendation-container">
