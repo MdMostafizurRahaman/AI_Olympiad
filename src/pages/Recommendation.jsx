@@ -50,7 +50,7 @@ const Recommendation = () => {
                             <span className="recommendation-pm25">AQI মাত্রা - {item.predicted_pm25.toFixed(2)}</span>
                         </div>
                         <div className="recommendation-content">
-                            <strong className="recommendation-text">সুপারিশ:(ecommendation)</strong>
+                            <strong className="recommendation-text">সুপারিশ:(Recommendation)</strong>
                             <ReactMarkdown className="recommendation-markdown">
                                 {recommendations[index] || "লোড হচ্ছে..."}
                             </ReactMarkdown>
