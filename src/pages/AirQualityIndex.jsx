@@ -23,6 +23,18 @@ const AirQualityIndex = () => {
         }
     }, []);
 
+    // useEffect(() => {
+    //     fetchLocationData();
+    // }, []);
+    
+    // useEffect(() => {
+    //     if (currentLocationData && currentLocationData.aqi !== undefined) {
+    //         const aqiValue = currentLocationData.aqi;
+    //         setAqi(aqiValue);
+    //         setHealthAdvice(getHealthAdvice(aqiValue));
+    //     }
+    // }, [currentLocationData]);
+    
 
 
     const getAQIColorClass = (aqi) => {
