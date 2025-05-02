@@ -38,4 +38,4 @@ def get_forecast(request: ForecastRequest):
     forecast = model.predict(start=0, end=request.days - 1)  # Predict for requested days
 
     forecast_df = pd.DataFrame({"date": future_dates, "predicted_pm25": forecast.values})
-    return forecast_df.to_dict(orient="records")
+    return {"predictions": forecast_df.to_dict(orient="records")}

@@ -30,7 +30,8 @@ const AqiForecast = () => {
             try {
                 setIsLoading(true);
                 const response = await axios.post("http://localhost:8000/forecast-model/", { days: 7 });
-                setForecast(response.data);
+                console.log("Updated Model-Trained Data:", response.data.predictions); // Debug log
+                setForecast(response.data.predictions); // Set predictions to state
             } catch (error) {
                 console.error("Error fetching model data:", error);
                 setError("Failed to fetch forecast model data");
@@ -55,21 +56,28 @@ const AqiForecast = () => {
             }
 
             const forecast = currentLocationData.aqiDataJson.data.forecast.daily;
-            let formattedData = forecast.pm25.map((item, index) => {
-                const pm10Data = forecast.pm10 && forecast.pm10[index] ? forecast.pm10[index].avg : 0;
-                const o3Data = forecast.o3 && forecast.o3[index] ? forecast.o3[index].avg : 0;
 
-                return {
-                    date: item.day,
-                    pm25: item.avg,
-                    pm10: pm10Data,
-                    o3: o3Data,
-                    predictedAQI: calculateAQI(item.avg, pm10Data, o3Data),
-                };
-            });
+            // Get the current date in YYYY-MM-DD format
+            const currentDate = new Date().toISOString().split("T")[0];
+
+            // Filter forecast data to include only dates starting from the current date
+            let formattedData = forecast.pm25
+                .filter(item => new Date(item.day) >= new Date(currentDate)) // Filter by date
+                .map((item, index) => {
+                    const pm10Data = forecast.pm10 && forecast.pm10[index] ? forecast.pm10[index].avg : 0;
+                    const o3Data = forecast.o3 && forecast.o3[index] ? forecast.o3[index].avg : 0;
+
+                    return {
+                        date: item.day,
+                        pm25: item.avg,
+                        pm10: pm10Data,
+                        o3: o3Data,
+                        predictedAQI: calculateAQI(item.avg, pm10Data, o3Data),
+                    };
+                });
 
             setForecastData(formattedData);
-            console.log("Formatted Forecast Data:", formattedData);
+            console.log("Filtered and Formatted Forecast Data:", formattedData);
         } catch (error) {
             console.error("Error fetching forecast:", error);
             setError("Failed to fetch forecast data");
@@ -99,31 +107,96 @@ const AqiForecast = () => {
         return Math.max(aqiPM25, aqiPM10, aqiO3);
     };
 
+    // Format dates consistently for both charts
+    const formatDates = (dateStr) => {
+        try {
+            return new Date(dateStr).toLocaleDateString();
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
+    // Convert model predicted PM2.5 to AQI for consistency
+    const modelAQIValues = Array.isArray(forecast)
+        ? forecast.map(item => calculateAQI(item.predicted_pm25 || 0, 0, 0))
+        : [];
+
+    // Calculate min and max values for y-axis scaling
+    const getYAxisConfig = () => {
+        const apiValues = forecastData.map(item => item.predictedAQI || 0);
+        const allValues = [...apiValues, ...modelAQIValues];
+        
+        if (allValues.length === 0) return { min: 0, max: 100 };
+        
+        // Find minimum and maximum across all datasets
+        const minValue = Math.max(0, Math.floor(Math.min(...allValues) * 0.9));
+        const maxValue = Math.ceil(Math.max(...allValues) * 1.1);
+        
+        return { min: minValue, max: maxValue };
+    };
+
+    const yAxisScale = getYAxisConfig();
+    
+    // Common chart options for consistent appearance
+    const chartOptions = {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: false,
+                min: yAxisScale.min,
+                max: yAxisScale.max,
+                title: {
+                    display: true,
+                    text: 'AQI Value'
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Date'
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+            },
+        },
+    };
+    
+    // Consistent colors for both charts
+    const primaryColor = "rgba(75, 192, 192, 1)";
+    const primaryColorBg = "rgba(75, 192, 192, 0.2)";
+
     const chartDataAPI = {
-        labels: forecastData.map(item => item.date || "N/A"),
+        labels: forecastData.map(item => formatDates(item.date)),
         datasets: [
             {
                 label: "API Forecasted AQI",
                 data: forecastData.map(item => item.predictedAQI || 0),
-                borderColor: "rgba(255, 99, 132, 1)",
-                backgroundColor: "rgba(255, 99, 132, 0.2)",
+                borderColor: primaryColor,
+                backgroundColor: primaryColorBg,
+                tension: 0.1
             },
         ],
     };
 
     const chartDataModel = {
-        labels: forecast.map(item => new Date(item.date).toLocaleDateString() || "N/A"),
+        labels: forecast.map(item => new Date(item.date).toLocaleDateString()), // Format dates
         datasets: [
             {
-                label: "Model Predicted PM2.5",
-                data: forecast.map(item => item.predicted_pm25?.toFixed(2) || 0),
+                label: "Model Predicted AQI",
+                data: forecast.map(item => item.predicted_pm25), // Use predicted_pm25 values
                 borderColor: "rgba(75, 192, 192, 1)",
                 backgroundColor: "rgba(75, 192, 192, 0.2)",
+                tension: 0.1,
             },
         ],
     };
-
-    console.log("chartDataAPI Data:", chartDataAPI.datasets[0].data);
 
     if (isLoading) {
         return <div className="loading">Loading forecast data...</div>;
@@ -173,7 +246,7 @@ const AqiForecast = () => {
                         <CardContent>
                             <Typography variant="h5">API Forecasted AQI</Typography>
                             {forecastData.length > 0 ? (
-                                <Line data={chartDataAPI} />
+                                <Line data={chartDataAPI} options={chartOptions} />
                             ) : (
                                 <p>No API forecast data available</p>
                             )}
@@ -185,7 +258,7 @@ const AqiForecast = () => {
                         <CardContent>
                             <Typography variant="h5">Model Predicted AQI</Typography>
                             {forecast.length > 0 ? (
-                                <Line data={chartDataModel} />
+                                <Line data={chartDataModel} options={chartOptions} />
                             ) : (
                                 <p>No model prediction data available</p>
                             )}
