@@ -1,2 +1,4 @@
 *pkl
 backend\sarimax_model.pkl
+*.pyc
+__pycache__/
