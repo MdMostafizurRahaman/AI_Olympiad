@@ -24,13 +24,17 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
+
+
 # Define a request model if needed
 class ForecastRequest(BaseModel):
     days: int = 7  # Default forecast for 7 days
 
 @app.get("/")
 def home():
-    return {"message": "AQI Forecast API is running!"}
+    return {"message": "AQI Forecast API is running!!"}
+
+
 
 @app.post("/forecast-model/")
 def get_forecast(request: ForecastRequest):
@@ -39,3 +43,4 @@ def get_forecast(request: ForecastRequest):
 
     forecast_df = pd.DataFrame({"date": future_dates, "predicted_pm25": forecast.values})
     return {"predictions": forecast_df.to_dict(orient="records")}
+
