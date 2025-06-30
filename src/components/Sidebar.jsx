@@ -12,6 +12,7 @@ import { ImNewspaper } from "react-icons/im";
 import { MdMultilineChart } from "react-icons/md";
 import { TbReport } from "react-icons/tb";
 import SettingsIcon from '@mui/icons-material/Settings';
+import { FaBrain } from "react-icons/fa"; // NEW: Import Brain icon
 import { Mycontext } from '../App';
 import AIChatbotModal from './Header/AIChatbotModal';
 
@@ -86,9 +87,21 @@ const Sidebar = () => {
                     </Link>
                 </li>
 
+                {/* NEW: AI Mood Analysis Link */}
+                <li>
+                    <Link to="/mood-analysis">
+                        <Button className={`w-100 ${activeTab === 4 ? 'active' : ''}`} onClick={() => isOpenSubMenu(4)}>
+                            <span className='icon'>
+                                <FaBrain />
+                            </span>
+                            AI Mood Analysis
+                        </Button>
+                    </Link>
+                </li>
+
                 <li>
                     <Link to="/aqi-ranking">
-                        <Button className={`w-100 ${activeTab === 4 ? 'active' : ''}`} onClick={() => isOpenSubMenu(4)}>
+                        <Button className={`w-100 ${activeTab === 5 ? 'active' : ''}`} onClick={() => isOpenSubMenu(5)}>
                             <span className='icon'>
                                 <MdMultilineChart />
                             </span>
@@ -99,7 +112,7 @@ const Sidebar = () => {
 
                 <li>
                     <Link to="/safety">
-                        <Button className={`w-100 ${activeTab === 5 ? 'active' : ''}`} onClick={() => isOpenSubMenu(5)}>
+                        <Button className={`w-100 ${activeTab === 6 ? 'active' : ''}`} onClick={() => isOpenSubMenu(6)}>
                             <span className='icon'>
                                 <FaHeadSideMask />
                             </span>
@@ -110,7 +123,7 @@ const Sidebar = () => {
 
                 <li>
                     <Link to="/recommerndations">
-                    <Button className={`w-100 ${activeTab===6 ? 'active' : ''}`} onClick={()=>isOpenSubMenu(6)} >
+                    <Button className={`w-100 ${activeTab===7 ? 'active' : ''}`} onClick={()=>isOpenSubMenu(7)} >
                             <span className='icon'>
                                 <HelpOutlineIcon />
                             </span>
@@ -122,7 +135,7 @@ const Sidebar = () => {
 
                 <li>
                     <Link to="/daily-report">
-                        <Button className={`w-100 ${activeTab === 7 ? 'active' : ''}`} onClick={() => isOpenSubMenu(7)}>
+                        <Button className={`w-100 ${activeTab === 8 ? 'active' : ''}`} onClick={() => isOpenSubMenu(8)}>
                             <span className='icon'>
                                 <TbReport />
                             </span>
@@ -133,7 +146,7 @@ const Sidebar = () => {
 
                 <li>
                     <Link to="/notification">
-                        <Button className={`w-100 ${activeTab === 8 ? 'active' : ''}`} onClick={() => isOpenSubMenu(8)}>
+                        <Button className={`w-100 ${activeTab === 9 ? 'active' : ''}`} onClick={() => isOpenSubMenu(9)}>
                             <span className='icon'>
                                 <SettingsIcon />
                             </span>
@@ -144,7 +157,7 @@ const Sidebar = () => {
 
                 <li>
                     <Link to="/news">
-                        <Button className={`w-100 ${activeTab === 9 ? 'active' : ''}`} onClick={() => isOpenSubMenu(9)}>
+                        <Button className={`w-100 ${activeTab === 10 ? 'active' : ''}`} onClick={() => isOpenSubMenu(10)}>
                             <span className='icon'>
                                 <ImNewspaper />
                             </span>

@@ -2,8 +2,8 @@ import React, { createContext, useState, useEffect } from 'react';
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import DashBoard from './pages/DashBoard.jsx';
-import Header from './components/Header/Header.jsx';
+import DashBoard from './pages/DashBoard';
+import Header from './components/Header/Header';
 import Sidebar from './components/Sidebar.jsx';
 import Login from './pages/Login.jsx';
 import SignUp from './pages/SignUp.jsx';
@@ -13,15 +13,15 @@ import AqiForecast from './pages/AqiForecast.jsx';
 import AqiRanking from './pages/AqiRanking.jsx'
 import SafetyMeasurement from './pages/SafetyMeasurement.jsx';
 import DailyReport from './pages/DailyReport.jsx';
-import Notification from "./pages/Notification.jsx";
-import Recommendation from "./pages/Recommendation.jsx";
+import Notification from "./pages/Notification";
+import Recommendation from "./pages/Recommendation";
+import MoodAnalysis from "./pages/MoodAnalysis.jsx"; // NEW
 
 // Create context outside the component
 const Mycontext = createContext();
 
 // Load Google Maps API once and properly
 const loadGoogleMapsScript = () => {
-  // Check if the script is already loaded
   if (!document.querySelector('script[src*="maps.googleapis.com/maps/api"]')) {
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`;
@@ -29,7 +29,6 @@ const loadGoogleMapsScript = () => {
     script.defer = true;
     document.head.appendChild(script);
     
-    // Define global callback
     window.initMap = () => {
       console.log("Google Maps API loaded successfully");
     };
@@ -41,7 +40,6 @@ const App = () => {
   const [isLogin, setIsLogin] = useState(false);
   const [isHideSidebarAndHeader, setisHideSidebarAndHeader] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
-    // Get theme from localStorage or default to light
     const savedTheme = localStorage.getItem('themeMode');
     return savedTheme === 'dark' ? false : true;
   });
@@ -52,12 +50,21 @@ const App = () => {
     humidity: null,
     location: null,
   });
+  
+  // NEW: Add mood prediction state
+  const [moodPrediction, setMoodPrediction] = useState({
+    focus: 0.7,
+    energy: 0.7,
+    mood: 0.7,
+    recommendations: [],
+    confidence: 0.8
+  });
+  
   const [isFetching, setIsFetching] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Load Google Maps script once on component mount
     loadGoogleMapsScript();
   }, []);
 
@@ -73,11 +80,49 @@ const App = () => {
     }
   }, [themeMode]);
 
+  // NEW: Simple mood prediction function
+  const calculateMoodPrediction = (aqi, temperature, humidity) => {
+    if (!aqi || aqi === "N/A") return moodPrediction;
+    
+    const aqiValue = parseInt(aqi);
+    
+    // Research-based mood impact calculations
+    const focusImpact = Math.max(0.2, 1 - (aqiValue - 50) * 0.003);
+    const energyImpact = Math.max(0.2, 1 - (aqiValue - 30) * 0.004);
+    const moodImpact = Math.max(0.2, 1 - (aqiValue - 40) * 0.0035);
+    
+    // Generate recommendations based on AQI
+    const recommendations = [];
+    if (aqiValue > 100) {
+      recommendations.push("Take frequent indoor breaks");
+      recommendations.push("Use air purifiers if available");
+      recommendations.push("Stay well-hydrated");
+    }
+    if (focusImpact < 0.6) {
+      recommendations.push("Try breathing exercises");
+      recommendations.push("Take short meditation breaks");
+    }
+    if (energyImpact < 0.6) {
+      recommendations.push("Consider vitamin D supplements");
+      recommendations.push("Light indoor exercises");
+    }
+    
+    const prediction = {
+      focus: focusImpact,
+      energy: energyImpact,
+      mood: moodImpact,
+      recommendations,
+      confidence: 0.8
+    };
+    
+    setMoodPrediction(prediction);
+    return prediction;
+  };
+
   const fetchLocationData = async (searchLocation = null) => {
     setIsFetching(true);
     setError(null);
     
-    // Use environment variables
     const aqicnToken = import.meta.env.VITE_AQICN_API_TOKEN;
     const weatherApiKey = import.meta.env.VITE_WEATHER_API_KEY;
   
@@ -85,7 +130,6 @@ const App = () => {
       let latitude, longitude, locationName;
   
       if (searchLocation) {
-        // Fetch coordinates based on searched city name
         const geoResponse = await fetch(
           `https://api.openweathermap.org/geo/1.0/direct?q=${searchLocation}&limit=1&appid=${weatherApiKey}`
         );
@@ -101,7 +145,6 @@ const App = () => {
         longitude = geoData[0].lon;
         locationName = geoData[0].name;
       } else {
-        // Use device's current location when no search is made
         try {
           const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -115,14 +158,12 @@ const App = () => {
         } catch (geoError) {
           console.error("Geolocation error:", geoError);
           setError("Unable to get location. Using default location (Dhaka)");
-          // Default to Dhaka coordinates
           latitude = 23.8103;
           longitude = 90.4125;
           locationName = "Dhaka";
         }
       }
   
-      // Fetch AQI Data with error handling
       const aqiResponse = await fetch(
         `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${aqicnToken}`
       );
@@ -137,7 +178,6 @@ const App = () => {
         throw new Error(`AQI data error: ${aqiData.data}`);
       }
   
-      // Fetch Weather Data
       const weatherResponse = await fetch(
         `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${weatherApiKey}&units=metric`
       );
@@ -147,14 +187,24 @@ const App = () => {
       }
       
       const weatherData = await weatherResponse.json();
-  
-      setCurrentLocationData({
+
+      const locationData = {
         aqiDataJson: aqiData,
         aqi: aqiData.data?.aqi || "N/A",
         temperature: weatherData.main?.temp || "N/A",
         humidity: weatherData.main?.humidity || "N/A",
         location: locationName || weatherData.name || "N/A",
-      });
+      };
+      
+      setCurrentLocationData(locationData);
+      
+      // NEW: Calculate mood prediction whenever location data is updated
+      calculateMoodPrediction(
+        locationData.aqi, 
+        locationData.temperature, 
+        locationData.humidity
+      );
+      
     } catch (error) {
       console.error("Error fetching location data:", error);
       setError(`Error: ${error.message}`);
@@ -164,9 +214,8 @@ const App = () => {
   };
 
   useEffect(() => {
-    fetchLocationData(); // Initial fetch
+    fetchLocationData();
     
-    // Update every hour
     const intervalId = setInterval(() => {
       fetchLocationData();
     }, 60 * 60 * 1000);
@@ -189,7 +238,11 @@ const App = () => {
     isFetching,
     name,
     setName,
-    error
+    error,
+    // NEW: Add mood prediction to context
+    moodPrediction,
+    setMoodPrediction,
+    calculateMoodPrediction
   };
   
   return (
@@ -218,6 +271,7 @@ const App = () => {
               <Route path='/daily-report' exact element={<DailyReport />} />
               <Route path="/notification" element={<Notification />} />
               <Route path="/recommerndations" element={<Recommendation />} />
+              <Route path="/mood-analysis" element={<MoodAnalysis />} />
             </Routes>
           </div>
         </div>
