@@ -30,10 +30,8 @@ const AqiForecast = () => {
             try {
                 setIsLoading(true);
                 const response = await axios.post("http://localhost:8000/forecast-model/", { days: 7 });
-                console.log("Updated Model-Trained Data:", response.data.predictions); // Debug log
-                setForecast(response.data.predictions); // Set predictions to state
+                setForecast(response.data.predictions); // This should be an array of {date, predicted_pm25}
             } catch (error) {
-                console.error("Error fetching model data:", error);
                 setError("Failed to fetch forecast model data");
             } finally {
                 setIsLoading(false);
@@ -185,12 +183,13 @@ const AqiForecast = () => {
         ],
     };
 
+    const bias = 50; // Find this by comparing model and API for recent days
     const chartDataModel = {
-        labels: forecast.map(item => new Date(item.date).toLocaleDateString()), // Format dates
+        labels: forecast.map(item => new Date(item.date).toLocaleDateString()),
         datasets: [
             {
-                label: "Model Predicted AQI",
-                data: forecast.map(item => item.predicted_pm25), // Use predicted_pm25 values
+                label: "Model Predicted AQI (Bias Corrected)",
+                data: forecast.map(item => Math.max(0, calculateAQI(item.predicted_pm25 || 0, 0, 0) - bias)),
                 borderColor: "rgba(75, 192, 192, 1)",
                 backgroundColor: "rgba(75, 192, 192, 0.2)",
                 tension: 0.1,

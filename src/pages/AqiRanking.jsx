@@ -129,20 +129,37 @@ const AqiRanking = () => {
         return;
       }
 
-      const fetchAQI = async (location) => {
-        try {
-          const response = await fetch(`https://api.waqi.info/feed/${location.city.toLowerCase().replace(/ /g, '-')}/?token=${token}`);
-          const data = await response.json();
-          if (!data || !data.data || !data.data.aqi) {
-            console.error(`Invalid data for ${location.city}`, data);
-            return { ...location, aqi: 'N/A' };
-          }
-          return { ...location, aqi: data.data.aqi };
-        } catch (error) {
-          console.error(`Error fetching data for ${location.city}:`, error);
-          return { ...location, aqi: 'N/A' };
-        }
-      };
+      // const fetchAQI = async (location) => {
+      //   try {
+      //     // Replace spaces and special characters for the API
+      //     const citySlug = location.city
+      //       .toLowerCase()
+      //       .replace(/ /g, '-')
+      //       .replace(/[^\w-]/g, '');
+      //     const response = await fetch(`https://api.waqi.info/feed/${citySlug}/?token=${token}`);
+      //     const data = await response.json();
+      //     if (!data || !data.data || typeof data.data.aqi !== 'number') {
+      //       return { ...location, aqi: 'N/A' };
+      //     }
+      //     return { ...location, aqi: data.data.aqi };
+      //   } catch (error) {
+      //     return { ...location, aqi: 'N/A' };
+      //   }
+      // };
+
+  const fetchAQI = async (location) => {
+  try {
+    const citySlug = encodeURIComponent(location.city);
+    const response = await fetch(`https://api.waqi.info/feed/${citySlug}/?token=${token}`);
+    const data = await response.json();
+    if (!data || data.status !== "ok" || typeof data.data.aqi !== 'number') {
+      return { ...location, aqi: 'N/A' };
+    }
+    return { ...location, aqi: data.data.aqi };
+  } catch (error) {
+    return { ...location, aqi: 'N/A' };
+  }
+};
 
       const aqiData = await Promise.all(locationData.map(fetchAQI));
       const validAqiData = aqiData.filter(item => item.aqi !== 'N/A');
@@ -171,15 +188,17 @@ const AqiRanking = () => {
   };
 
   const showTopCleanest = () => {
-    const sorted = [...locations].sort((a, b) => a.aqi - b.aqi);
+    const sorted = [...locations]
+      .filter(loc => !isNaN(Number(loc.aqi)))
+      .sort((a, b) => Number(a.aqi) - Number(b.aqi));
     setSortedLocations(sorted.slice(0, 15));
-    console.log("Displaying top cleanest locations:", sorted.slice(0, 15));
   };
 
   const showTopWorst = () => {
-    const sorted = [...locations].sort((a, b) => b.aqi - a.aqi);
+    const sorted = [...locations]
+      .filter(loc => !isNaN(Number(loc.aqi)))
+      .sort((a, b) => Number(b.aqi) - Number(a.aqi));
     setSortedLocations(sorted.slice(0, 15));
-    console.log("Displaying top worst locations:", sorted.slice(0, 15));
   };
 
   return (
